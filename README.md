@@ -35,7 +35,8 @@ Extended output to consider:
 * Maven
 
 ##How to run
-`mvn exec:java -Dexec.mainClass="com.ottamotta.retro.StarterPipeline"`
+Provide input csv file name and path with ticks and timestamps, and output filename for results:
+`mvn exec:java -Dexec.mainClass="com.ottamotta.retro.StarterPipeline --inputFile=./test.csv --output=averages"`
 
 
 ##Development notes

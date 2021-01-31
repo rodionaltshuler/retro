@@ -17,15 +17,12 @@
  */
 package com.ottamotta.retro;
 
+import com.ottamotta.retro.indicator.TickWithIndicators;
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.Create;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.MapElements;
-import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.SimpleFunction;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * A starter example for writing Beam programs.
@@ -44,26 +41,27 @@ import org.slf4j.LoggerFactory;
  *   --runner=DataflowRunner
  */
 public class StarterPipeline {
-  private static final Logger LOG = LoggerFactory.getLogger(StarterPipeline.class);
 
   public static void main(String[] args) {
-    Pipeline p = Pipeline.create(
-        PipelineOptionsFactory.fromArgs(args).withValidation().create());
 
-    p.apply(Create.of("Hello", "World"))
-    .apply(MapElements.via(new SimpleFunction<String, String>() {
-      @Override
-      public String apply(String input) {
-        return input.toUpperCase();
-      }
-    }))
-    .apply(ParDo.of(new DoFn<String, Void>() {
-      @ProcessElement
-      public void processElement(ProcessContext c)  {
-        LOG.info(c.element());
-      }
-    }));
+    PriceMovingAverage.MovingAverageOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().as(PriceMovingAverage.MovingAverageOptions.class);
 
-    p.run();
+    Pipeline pipeline = Pipeline.create(options);
+
+    pipeline.apply("ReadLines", TextIO.read().from(options.getInputFile()))
+            .apply("CalculateTicksWithAverageIndicator", new PriceMovingAverage.PriceMovingAverageTransform())
+            .apply("FormatIndicatorsAsText", MapElements.via(new FormatAsTextFn<>()))
+            .apply("WriteAverages", TextIO.write().to(options.getOutput()));
+    pipeline.run().waitUntilFinish();
+  }
+
+  /**
+   * A SimpleFunction that converts a Word and Count into a printable string.
+   */
+  public static class FormatAsTextFn<T> extends SimpleFunction<T, String> {
+    @Override
+    public String apply(T input) {
+      return input.toString();
+    }
   }
 }
