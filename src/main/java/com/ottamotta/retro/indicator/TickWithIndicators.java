@@ -6,6 +6,12 @@ import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.schemas.JavaBeanSchema;
 import org.apache.beam.sdk.schemas.annotations.DefaultSchema;
 import org.apache.beam.sdk.transforms.Combine;
+import org.apache.beam.sdk.transforms.PTransform;
+import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.windowing.SlidingWindows;
+import org.apache.beam.sdk.transforms.windowing.Window;
+import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Duration;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -152,5 +158,18 @@ public class TickWithIndicators implements Serializable {
         }
 
 
+    }
+
+    public static class EnrichTicksWithIndicatorsTransform extends PTransform<PCollection<String>, PCollection<TickWithIndicators>> {
+
+        @Override
+        public PCollection<TickWithIndicators> expand(PCollection<String> input) {
+
+            return input
+                    .apply("ExtractTicks", ParDo.of(new Tick.ExtractTicksFn()))
+                    .apply("ApplyWindows", Window.<Tick>into(SlidingWindows.of(Duration.standardMinutes(6))))
+                    .apply("ExtractIndicators", new Indicator.ExtractIndicators());
+
+        }
     }
 }

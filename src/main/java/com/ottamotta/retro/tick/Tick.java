@@ -2,6 +2,8 @@ package com.ottamotta.retro.tick;
 
 import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
+import org.apache.beam.sdk.transforms.DoFn;
+import org.joda.time.Instant;
 
 import java.io.Serializable;
 import java.util.Objects;
@@ -63,5 +65,23 @@ public class Tick implements Serializable {
     public String toString() {
         return String.join(",",String.valueOf(timestamp), String.valueOf(open), String.valueOf(high),
                 String.valueOf(low), String.valueOf(close));
+    }
+
+    public static class ExtractTicksFn extends DoFn<String, Tick> {
+
+        @ProcessElement
+        public void processElement(@Element String element, OutputReceiver<Tick> outputReceiver) {
+            String[] columns = element.split(",");
+            try {
+                long timestamp = Long.parseLong(columns[0]);
+                double open = Double.parseDouble(columns[1]);
+                double high = Double.parseDouble(columns[2]);
+                double low = Double.parseDouble(columns[3]);
+                double close = Double.parseDouble(columns[4]);
+                Tick tick = new Tick(timestamp, open, high, low, close);
+                outputReceiver.outputWithTimestamp(tick, Instant.ofEpochSecond(timestamp));
+            } catch (Exception ignored) {
+            }
+        }
     }
 }
